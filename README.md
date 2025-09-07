@@ -1,73 +1,114 @@
-# Welcome to your Lovable project
+# 🏫 SCOE Data Flow: Student Data & Subject Management Platform
 
-## Project info
+<div align="center">
 
-**URL**: https://lovable.dev/projects/88ffa806-b143-403a-80b7-fa0b8acd0d48
+<img src="./src/assets/LOGO.jpg" alt="SCOE Data Flow Logo" height="170">
 
-## How can I edit this code?
+**Team Innovate X**  
+👩‍💻 Project Leader: Lasya and Pranav**
 
-There are several ways of editing your application.
+**A Smart Web Platform for Managing Student Data, Subject Registrations, and Final Lists at SCOE**
 
-**Use Lovable**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)  
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue.svg)](https://www.postgresql.org/)  
+[![Backend](https://img.shields.io/badge/Backend-Flask%20%7C%20FastAPI-red.svg)](https://fastapi.tiangolo.com/)  
+[![Frontend](https://img.shields.io/badge/Frontend-HTML%20%7C%20CSS%20%7C%20JS-green.svg)](https://developer.mozilla.org/)  
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/88ffa806-b143-403a-80b7-fa0b8acd0d48) and start prompting.
+**🏆 Built for Hackathons & Scalable for Institutional Needs**
 
-Changes made via Lovable will be committed automatically to this repo.
+</div>
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚨 The Problem: Manual Student & Subject Management  
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Student data spread across multiple systems, prone to errors  
+- Manual subject entries = time-consuming and inefficient  
+- Difficulty generating consolidated final student lists  
+- Security and consistency risks without centralized DB  
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 💡 SCOE Data Flow: Our Solution  
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+**A centralized, PostgreSQL-powered web application that:**
+- Stores and manages complete student profiles  
+- Handles **subject registration & validation** (capacity + prerequisites)  
+- Generates **final consolidated student lists** automatically  
+- Provides **role-based access** (Admin, Faculty, Students)  
+- Supports data export (CSV, PDF) for reports  
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+## 🔑 Key Features  
+
+- 🎓 **Student Database** – Secure, centralized record storage  
+- 📝 **Subject Entry** – Validate prerequisites and capacity  
+- 📊 **Final Lists** – Generate by semester, subject, or class  
+- 👨‍🏫 **Role-Based Access** – Admin, Faculty, and Student views  
+- 📥 **Import/Export** – Easy backups, reports, and analytics  
+- 🔒 **Authentication & Security** – Ensures only authorized access  
+
+---
+
+## 🏗️ System Overview  
+
+### Student Journey  
+```mermaid
+graph TB
+  A[Student Entry Form] --> B[Student Database (PostgreSQL)]
+  B --> C[Subject Registration]
+  C --> D{Capacity & Prerequisite Check}
+  D -->|Valid| E[Store in DB]
+  D -->|Invalid| F[Error & Retry]
+  E --> G[Final Student List]
 ```
 
-**Edit a file directly in GitHub**
+```mermaid
+graph TB
+  H[Faculty Login] --> I[Manage Subjects]
+  I --> J[Approve Registrations]
+  J --> K[Update Student Records]
+  K --> L[Generate Reports & Final Lists]
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+  M[Admin Login] --> N[Add/Edit Student Data]
+  N --> K
+```
+```mermaid
+graph LR
+  FE[Frontend: HTML, CSS, JavaScript - React optional] --> BE[Backend: Flask/FastAPI (Python)]
+  BE --> DB[(PostgreSQL Database)]
+  BE --> AUTH[Authentication & Role Management]
+  BE --> EXPORT[CSV/PDF Export Engine]
+  DEVOPS[Deployment: Docker/Kubernetes Ready] --> BE
+```
 
-**Use GitHub Codespaces**
+☁️ Deployment & Scalability
+🚀 Dockerized backend for easy deployment
+⚡ REST APIs for interoperability with other college systems
+☸️ Kubernetes-ready for institutional scaling
+🔒 Role-based authentication and database encryption
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+🔮 Roadmap
+📱 Mobile-first student portal
+🔔 Email/SMS notifications for subject approvals
+📈 Analytics dashboard for student performance trends
+🌍 Multi-language interface for inclusivity
 
-## What technologies are used for this project?
+🌐 Project Links
+📂 GitHub Repository → SCOE Data Flow
+🎥 Demo Video → Watch on YouTube
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/88ffa806-b143-403a-80b7-fa0b8acd0d48) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+🖼️ Screenshots
+🔹 Login & Dashboard
+�
+🔹 Subject Registration Flow
+�
+🔹 Final Student List
+�
+👨‍👩‍👧 Team innovate X
+Lasya Korandla
+pranav raut
+amey kadam
+sairaj mote
