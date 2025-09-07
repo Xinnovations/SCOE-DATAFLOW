@@ -53,16 +53,14 @@
 ---
 
 ## 🏗️ System Overview  
-
 ### Student Journey  
 ```mermaid
-
 graph TB
-  A[Student Entry Form] --> B[Student Database (PostgreSQL)]
+  A[Student Entry Form] --> B[Student Database - PostgreSQL]
   B --> C[Subject Registration]
-  C --> D{Capacity & Prerequisite Check}
-  D -->|Valid| E[Store in DB]
-  D -->|Invalid| F[Error & Retry]
+  C --> D{Capacity and Prerequisite Check}
+  D -->|Valid| E[Store in Database]
+  D -->|Invalid| F[Error and Retry]
   E --> G[Final Student List]
 
 ```
@@ -79,13 +77,12 @@ graph TB
 ```
 
 ```mermaid
-
 graph LR
-  FE[Frontend: HTML, CSS, JavaScript - React optional] --> BE[Backend: Flask/FastAPI (Python)]
-  BE --> DB[(PostgreSQL Database)]
-  BE --> AUTH[Authentication & Role Management]
-  BE --> EXPORT[CSV/PDF Export Engine]
-  DEVOPS[Deployment: Docker/Kubernetes Ready] --> BE
+  FE[Frontend - HTML, CSS, JavaScript or React] --> BE[Backend - Flask or FastAPI in Python]
+  BE --> DB[PostgreSQL Database]
+  BE --> AUTH[Authentication and Role Management]
+  BE --> EXPORT[CSV and PDF Export Engine]
+  DEVOPS[Deployment - Docker and Kubernetes Ready] --> BE
 
 ```
 
