@@ -56,6 +56,7 @@
 
 ### Student Journey  
 ```mermaid
+
 graph TB
   A[Student Entry Form] --> B[Student Database (PostgreSQL)]
   B --> C[Subject Registration]
@@ -63,6 +64,7 @@ graph TB
   D -->|Valid| E[Store in DB]
   D -->|Invalid| F[Error & Retry]
   E --> G[Final Student List]
+
 ```
 
 ```mermaid
@@ -75,13 +77,16 @@ graph TB
   M[Admin Login] --> N[Add/Edit Student Data]
   N --> K
 ```
+
 ```mermaid
+
 graph LR
   FE[Frontend: HTML, CSS, JavaScript - React optional] --> BE[Backend: Flask/FastAPI (Python)]
   BE --> DB[(PostgreSQL Database)]
   BE --> AUTH[Authentication & Role Management]
   BE --> EXPORT[CSV/PDF Export Engine]
   DEVOPS[Deployment: Docker/Kubernetes Ready] --> BE
+
 ```
 
 ☁️ Deployment & Scalability
