@@ -16,7 +16,6 @@ class StudentBase(BaseModel):
     date_of_birth: date
     gender: Gender
     address: Optional[str] = None
-    city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
     postal_code: Optional[str] = Field(None, max_length=20)
@@ -43,7 +42,6 @@ class StudentUpdate(BaseModel):
     date_of_birth: Optional[date] = None
     gender: Optional[Gender] = None
     address: Optional[str] = None
-    city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
     postal_code: Optional[str] = Field(None, max_length=20)

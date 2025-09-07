@@ -86,7 +86,7 @@ const StudentEntryForm = ({ onStudentAdded }: StudentEntryFormProps) => {
       const [firstName, ...lastNameParts] = formData.name.split(' ');
       const lastName = lastNameParts.join(' ') || ' '; // In case there's no last name
       const rollNumber = generateRollNumber(formData.branch, formData.year);
-      const personalEmail = generatePersonalEmail(formData.name, rollNumber);
+      const personalEmail = generatePersonalEmail(formData.name, rollNumber, formData.branch);
       
       const studentData: StudentCreate = {
         first_name: firstName,
@@ -103,10 +103,10 @@ const StudentEntryForm = ({ onStudentAdded }: StudentEntryFormProps) => {
         year: formData.year as Student['year'],
         mother_name: formData.motherName,
         department: formData.branch,
-        city: '',
-        state: '',
+        state: `${formData.year} Year`,
         country: 'India',
-        institutional_email: personalEmail.replace('@student.', '@college.')
+        postal_code: '',
+        institutional_email: personalEmail
       };
 
       // First save to backend
@@ -122,12 +122,11 @@ const StudentEntryForm = ({ onStudentAdded }: StudentEntryFormProps) => {
         date_of_birth: formData.dateOfBirth,
         gender: formData.gender as Student['gender'],
         address: formData.address,
-        city: '',
-        state: '',
+        state: `${formData.year} Year`,
         country: 'India',
         admission_number: rollNumber,
         roll_number: rollNumber,
-        institutional_email: personalEmail.replace('@student.', '@college.'),
+        institutional_email: personalEmail,
         department: formData.branch,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

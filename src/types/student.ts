@@ -5,9 +5,8 @@ export interface StudentBase {
   email: string;
   phone: string;
   date_of_birth: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: 'male' | 'female' | 'other';
   address: string;
-  city: string;
   state: string;
   country: string;
   postal_code?: string;
@@ -44,9 +43,8 @@ export interface StudentCreate {
   email: string;
   phone: string;
   date_of_birth: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: 'male' | 'female' | 'other';
   address: string;
-  city?: string;
   state?: string;
   country?: string;
   postal_code?: string;

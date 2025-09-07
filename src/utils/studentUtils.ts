@@ -1,28 +1,34 @@
 import { Student } from '@/types/student';
 
 export const generateRollNumber = (branch: string, year: string): string => {
-  const branchCode = {
-    'Computer Science Engineering': 'CSE',
-    'Information Technology': 'IT',
-    'Electronics and Communication Engineering': 'ECE',
-    'Electrical Engineering': 'EE',
-    'Mechanical Engineering': 'ME',  
-    'Civil Engineering': 'CE',
-    'Chemical Engineering': 'CHE',
-    'Aerospace Engineering': 'AE',
-  }[branch] || 'GEN';
-  
-  const yearCode = year.charAt(0);
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-  const randomNum = Math.floor(Math.random() * 9000) + 1000;
-  
-  return `${currentYear}${branchCode}${yearCode}${randomNum}`;
+  // Generate a 4-digit sequential number (you might want to implement proper sequencing)
+  const randomNum = Math.floor(Math.random() * 9000) + 1000; // 4-digit number
+  return `SCOE${randomNum}`;
 };
 
-export const generatePersonalEmail = (name: string, rollNumber: string): string => {
-  const cleanName = name.toLowerCase().replace(/\s+/g, '.');
-  const rollSuffix = rollNumber.slice(-4);
-  return `${cleanName}.${rollSuffix}@student.college.edu`;
+export const generatePersonalEmail = (name: string, rollNumber: string, branch: string = 'Computer Science Engineering'): string => {
+  // Clean the name: remove extra spaces, special characters, convert to lowercase
+  const cleanName = name.trim()
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '') // Remove non-alphabetic characters except spaces
+    .replace(/\s+/g, '') // Remove all spaces
+    .replace(/[^a-z]/g, ''); // Keep only letters
+  
+  // Map branch to department domain
+  const branchToDepartment: { [key: string]: string } = {
+    'Computer Science Engineering': 'computerscienceengineering',
+    'Information Technology': 'informationtechnology',
+    'Electronics and Communication Engineering': 'electronicsandcommunicationengineering',
+    'Electrical Engineering': 'electricalengineering',
+    'Mechanical Engineering': 'mechanicalengineering',
+    'Civil Engineering': 'civilengineering',
+    'Chemical Engineering': 'chemicalengineering',
+    'Aerospace Engineering': 'aerospaceengineering',
+  };
+  
+  const department = branchToDepartment[branch] || 'computerscienceengineering';
+  
+  return `${cleanName}@${department}.scoe.edu.in`;
 };
 
 export const saveStudentToStorage = (student: Student): void => {

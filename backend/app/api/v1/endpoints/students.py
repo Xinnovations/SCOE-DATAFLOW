@@ -1,5 +1,6 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, BackgroundTasks, Response
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.crud import crud_student
@@ -11,6 +12,9 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from sqlalchemy.exc import IntegrityError
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 from app.db.session import get_db
 
 router = APIRouter()
@@ -46,12 +50,21 @@ def create_student(
 
 @router.post("/import/preview")
 async def import_preview(file: UploadFile = File(...)):
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx')):
+        raise HTTPException(status_code=400, detail="Only CSV and Excel (.xlsx) files are supported")
+    
     content = await file.read()
-    text = content.decode('utf-8')
-    reader = csv.DictReader(io.StringIO(text))
-    rows = list(reader)
+    
+    if file.filename.endswith('.xlsx'):
+        # Handle Excel file
+        df = pd.read_excel(io.BytesIO(content))
+        rows = df.to_dict('records')
+    else:
+        # Handle CSV file
+        text = content.decode('utf-8')
+        reader = csv.DictReader(io.StringIO(text))
+        rows = list(reader)
+    
     # Validate minimal columns present
     required = [
         'Name','Address','Gender','Category','Date of Birth','Phone Number','Branch','Year','Mother Name'
@@ -60,7 +73,7 @@ async def import_preview(file: UploadFile = File(...)):
     for row in rows:
         errors = []
         for r in required:
-            if not row.get(r):
+            if not row.get(r) or pd.isna(row.get(r)):
                 errors.append(f"Missing {r}")
         preview.append({
             'row': row,
@@ -75,25 +88,39 @@ async def import_save(
     db: Session = Depends(get_db),
     file: UploadFile = File(...),
 ):
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx')):
+        raise HTTPException(status_code=400, detail="Only CSV and Excel (.xlsx) files are supported")
+    
     content = await file.read()
-    text = content.decode('utf-8')
-    reader = csv.DictReader(io.StringIO(text))
+    
+    if file.filename.endswith('.xlsx'):
+        # Handle Excel file
+        df = pd.read_excel(io.BytesIO(content))
+        rows = df.to_dict('records')
+    else:
+        # Handle CSV file
+        text = content.decode('utf-8')
+        reader = csv.DictReader(io.StringIO(text))
+        rows = list(reader)
+    
     total = 0
     successful = 0
     failed = 0
     errors: List[str] = []
-    for index, row in enumerate(reader, start=2):
+    for index, row in enumerate(rows, start=2):
         total += 1
         try:
-            name = (row.get('Name') or '').strip()
+            name = str(row.get('Name') or '').strip()
+            if pd.isna(row.get('Name')):
+                name = ''
             if ' ' in name:
                 first_name, last_name = name.split(' ', 1)
             else:
                 first_name, last_name = name, ''
             roll_number = generate_roll_number()
-            dept = row.get('Branch') or 'dept'
+            dept = str(row.get('Branch') or 'dept')
+            if pd.isna(row.get('Branch')):
+                dept = 'dept'
             email_institute = generate_institutional_email(name, dept)
             # ensure unique institutional email
             if email_institute and '@' in email_institute:
@@ -110,16 +137,46 @@ async def import_save(
                 roll_number = generate_roll_number()
             # Use institutional email as the required email to avoid invalid cases like
             # "first.@example.com" when last_name is missing
+            # Handle potential NaN values from Excel
+            phone_val = row.get('Phone Number')
+            if pd.isna(phone_val):
+                phone_val = None
+            else:
+                phone_val = str(phone_val)
+            
+            dob_val = row.get('Date of Birth')
+            if pd.isna(dob_val):
+                dob_val = None
+            else:
+                dob_val = str(dob_val)
+            
+            gender_val = row.get('Gender')
+            if pd.isna(gender_val):
+                gender_val = 'male'
+            else:
+                gender_val = str(gender_val).lower()
+            
+            address_val = row.get('Address')
+            if pd.isna(address_val):
+                address_val = None
+            else:
+                address_val = str(address_val)
+            
+            year_val = row.get('Year')
+            if pd.isna(year_val):
+                year_val = None
+            else:
+                year_val = str(year_val)
+            
             payload = student_schema.StudentCreate(
                 first_name=first_name,
                 last_name=last_name,
                 email=email_institute,
-                phone=row.get('Phone Number') or None,
-                date_of_birth=row.get('Date of Birth'),
-                gender=student_schema.Gender[row.get('Gender').lower()],
-                address=row.get('Address') or None,
-                city=row.get('Branch') or None,
-                state=row.get('Year') or None,
+                phone=phone_val,
+                date_of_birth=dob_val,
+                gender=student_schema.Gender[gender_val],
+                address=address_val,
+                state=year_val,
                 country='India',
                 postal_code=None,
                 admission_number=roll_number,
@@ -142,23 +199,111 @@ async def import_save(
         except Exception as e:
             failed += 1
             errors.append(f"Row {index}: {str(e)}")
-    return { 'total': total, 'successful': successful, 'failed': failed, 'errors': errors }
+    
+    # Return proper JSON response
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content={
+            'total': total, 
+            'successful': successful, 
+            'failed': failed, 
+            'errors': errors
+        },
+        status_code=200
+    )
 
 @router.get("/export/csv")
 def export_students_csv(db: Session = Depends(get_db)):
     students = crud_student.get_students(db)
     headers = [
-        'Roll Number','First Name','Last Name','Institutional Email','Personal Email','Phone','Address','Gender','Department'
+        'Roll Number','First Name','Last Name','Institutional Email','Personal Email','Phone','Address','Gender','Department','Year'
     ]
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
     writer.writerow(headers)
     for s in students:
         writer.writerow([
-            getattr(s, 'roll_number', ''), s.first_name, s.last_name, getattr(s, 'institutional_email', ''), s.email,
-            s.phone or '', s.address or '', s.gender.value, getattr(s, 'department', '')
+            getattr(s, 'roll_number', '') or '',
+            s.first_name or '',
+            s.last_name or '',
+            getattr(s, 'institutional_email', '') or '',
+            s.email or '',
+            s.phone or '',
+            s.address or '',
+            s.gender.value if s.gender else '',
+            getattr(s, 'department', '') or '',
+            getattr(s, 'state', '') or ''
         ])
-    return output.getvalue()
+    return Response(output.getvalue(), media_type="text/csv", headers={
+        "Content-Disposition": "attachment; filename=students.csv"
+    })
+
+@router.get("/export/excel")
+def export_students_excel(db: Session = Depends(get_db)):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        students = crud_student.get_students(db)
+        
+        # Create a new workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Students"
+        
+        # Define headers
+        headers = [
+            'Roll Number', 'First Name', 'Last Name', 'Institutional Email', 
+            'Personal Email', 'Phone', 'Address', 'Gender', 'Department', 'Year'
+        ]
+        
+        # Add headers to first row
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+        
+        # Add student data
+        for row, student in enumerate(students, 2):
+            ws.cell(row=row, column=1, value=getattr(student, 'roll_number', '') or '')
+            ws.cell(row=row, column=2, value=student.first_name or '')
+            ws.cell(row=row, column=3, value=student.last_name or '')
+            ws.cell(row=row, column=4, value=getattr(student, 'institutional_email', '') or '')
+            ws.cell(row=row, column=5, value=student.email or '')
+            ws.cell(row=row, column=6, value=student.phone or '')
+            ws.cell(row=row, column=7, value=student.address or '')
+            ws.cell(row=row, column=8, value=student.gender.value if student.gender else '')
+            ws.cell(row=row, column=9, value=getattr(student, 'department', '') or '')
+            ws.cell(row=row, column=10, value=getattr(student, 'state', '') or '')
+        
+        # Style the header row
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Set column widths
+        column_widths = [15, 20, 20, 35, 30, 15, 40, 10, 35, 12]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = width
+        
+        # Save to BytesIO
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return Response(
+            content=output.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=students.xlsx"}
+        )
+        
+    except Exception as e:
+        print(f"Excel export error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export Excel file: {str(e)}")
 
 @router.post("/email/csv")
 def email_students_csv(
@@ -233,7 +378,7 @@ def update_student(
     """
     Update a student.
     """
-    student = crud.crud_student.get_student(db, student_id=student_id)
+    student = crud_student.get_student(db, student_id=student_id)
     if not student:
         raise HTTPException(
             status_code=404,

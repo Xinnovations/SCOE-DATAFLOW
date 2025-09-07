@@ -35,8 +35,17 @@ const AdminLayout = ({ children, activeTab, onTabChange }: AdminLayoutProps) => 
       <div className="min-h-screen flex w-full bg-background">
         <Sidebar className="border-r border-border bg-sidebar">
           <SidebarHeader className="border-b border-sidebar-border p-6">
-            <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-sidebar-foreground" />
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/scoe-logo.png" 
+                alt="SCOE Logo" 
+                className="h-10 w-10 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <GraduationCap className="h-8 w-8 text-sidebar-foreground hidden" />
               <div>
                 <h2 className="text-xl font-bold text-sidebar-foreground">SCOEFLOW CONNECT</h2>
                 <p className="text-sm text-sidebar-foreground/70">Admin Portal</p>

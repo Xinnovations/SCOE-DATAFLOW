@@ -18,7 +18,6 @@ class Student(Base):
     date_of_birth = Column(Date, nullable=False)
     gender = Column(Enum(Gender), nullable=False)
     address = Column(Text)
-    city = Column(String(50))
     state = Column(String(50))
     country = Column(String(50))
     postal_code = Column(String(20))

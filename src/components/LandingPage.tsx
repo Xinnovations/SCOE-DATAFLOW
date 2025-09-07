@@ -35,8 +35,17 @@ const LandingPage = () => {
       <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-primary" />
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/scoe-logo.png" 
+                alt="SCOE Logo" 
+                className="h-10 w-10 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <GraduationCap className="h-8 w-8 text-primary hidden" />
               <h1 className="text-2xl font-bold text-foreground">SCOEFLOW CONNECT</h1>
             </div>
             <div className="flex items-center space-x-4">
@@ -153,7 +162,7 @@ const LandingPage = () => {
       <footer className="border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 mt-16">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-muted-foreground">
-            <p>&copy; 2024 SCOEFLOW CONNECT. All rights reserved. Built for modern educational institutions.</p>
+            <p>&copy; 2025 SCOEFLOW CONNECT. All rights reserved. Built for modern educational institutions.</p>
           </div>
         </div>
       </footer>

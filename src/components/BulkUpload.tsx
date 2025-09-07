@@ -6,6 +6,7 @@ import { Student, BRANCHES } from '@/types/student';
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import * as XLSX from 'xlsx';
 
 interface BulkUploadProps {
   onStudentsUploaded: () => void;
@@ -28,71 +29,193 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
   const [showPreview, setShowPreview] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
-  const downloadSampleCSV = () => {
+  const downloadSampleExcel = () => {
     const sampleData = [
-      'Name,Address,Gender,Category,Date of Birth,Phone Number,Branch,Year,Mother Name',
-      'John Doe,"123 Main St, City, State",Male,General,1999-05-15,9876543210,Computer Science Engineering,1st Year,Jane Doe',
-      'Alice Smith,"456 Oak Ave, Town, State",Female,OBC,2000-03-22,9876543211,Information Technology,2nd Year,Mary Smith',
-      'Bob Johnson,"789 Pine Rd, Village, State",Male,SC,1998-12-08,9876543212,Electronics and Communication Engineering,3rd Year,Sarah Johnson'
+      {
+        'Name': 'John Doe',
+        'Address': '123 Main St, City, State',
+        'Gender': 'Male',
+        'Category': 'General',
+        'Date of Birth': '1999-05-15',
+        'Phone Number': '9876543210',
+        'Branch': 'Computer Science Engineering',
+        'Year': '1st Year',
+        'Mother Name': 'Jane Doe'
+      },
+      {
+        'Name': 'Alice Smith',
+        'Address': '456 Oak Ave, Town, State',
+        'Gender': 'Female',
+        'Category': 'OBC',
+        'Date of Birth': '2000-03-22',
+        'Phone Number': '9876543211',
+        'Branch': 'Information Technology',
+        'Year': '2nd Year',
+        'Mother Name': 'Mary Smith'
+      },
+      {
+        'Name': 'Bob Johnson',
+        'Address': '789 Pine Rd, Village, State',
+        'Gender': 'Male',
+        'Category': 'SC',
+        'Date of Birth': '1998-12-08',
+        'Phone Number': '9876543212',
+        'Branch': 'Electronics and Communication Engineering',
+        'Year': '3rd Year',
+        'Mother Name': 'Sarah Johnson'
+      }
     ];
     
-    const csvContent = sampleData.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'student-import-template.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    
+    // Set column widths for better formatting
+    const columnWidths = [
+      { wch: 20 }, // Name
+      { wch: 35 }, // Address
+      { wch: 10 }, // Gender
+      { wch: 12 }, // Category
+      { wch: 15 }, // Date of Birth
+      { wch: 15 }, // Phone Number
+      { wch: 40 }, // Branch
+      { wch: 12 }, // Year
+      { wch: 20 }  // Mother Name
+    ];
+    worksheet['!cols'] = columnWidths;
+    
+    // Style the header row
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "366092" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+    
+    // Apply header styling
+    const headers = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1', 'I1'];
+    headers.forEach(cell => {
+      if (worksheet[cell]) {
+        worksheet[cell].s = headerStyle;
+      }
+    });
+    
+    // Add data validation and formatting for data rows
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:I4');
+    for (let row = 2; row <= range.e.r + 1; row++) {
+      for (let col = 0; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row - 1, c: col });
+        if (worksheet[cellAddress]) {
+          worksheet[cellAddress].s = {
+            border: {
+              top: { style: "thin", color: { rgb: "CCCCCC" } },
+              bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+              left: { style: "thin", color: { rgb: "CCCCCC" } },
+              right: { style: "thin", color: { rgb: "CCCCCC" } }
+            },
+            alignment: { vertical: "center", wrapText: true }
+          };
+        }
+      }
+    }
+    
+    // Add instructions sheet
+    const instructionsData = [
+      ['STUDENT IMPORT TEMPLATE - INSTRUCTIONS'],
+      [''],
+      ['Required Columns:', 'Valid Values'],
+      ['Name', 'Full name (e.g., John Doe)'],
+      ['Address', 'Complete address'],
+      ['Gender', 'Male or Female'],
+      ['Category', 'General, OBC, SC, ST'],
+      ['Date of Birth', 'YYYY-MM-DD format (e.g., 1999-05-15)'],
+      ['Phone Number', '10-digit number (e.g., 9876543210)'],
+      ['Branch', 'See department list below'],
+      ['Year', '1st Year, 2nd Year, 3rd Year, 4th Year'],
+      ['Mother Name', 'Full name'],
+      [''],
+      ['Available Departments:'],
+      ...BRANCHES.map(branch => [branch])
+    ];
+    
+    const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);
+    instructionsSheet['!cols'] = [{ wch: 30 }, { wch: 50 }];
+    
+    // Style instructions header
+    if (instructionsSheet['A1']) {
+      instructionsSheet['A1'].s = {
+        font: { bold: true, size: 14, color: { rgb: "366092" } },
+        alignment: { horizontal: "center" }
+      };
+    }
+    
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Data');
+    XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instructions');
+    
+    XLSX.writeFile(workbook, 'student-import-template.xlsx');
     
     toast({
       title: "Template downloaded",
-      description: "Student import template has been downloaded",
+      description: "Enhanced Excel template with formatting and instructions downloaded",
     });
   };
 
-  const parseCSV = (csvText: string): any[] => {
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) {
-      throw new Error('CSV file must contain headers and at least one data row');
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const data = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.trim()) continue;
-
-      const values = [];
-      let current = '';
-      let inQuotes = false;
-
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
+  const parseFile = async (file: File): Promise<any[]> => {
+    if (file.name.endsWith('.xlsx')) {
+      // Parse Excel file
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+      return data;
+    } else {
+      // Parse CSV file
+      const csvText = await file.text();
+      const lines = csvText.trim().split('\n');
+      if (lines.length < 2) {
+        throw new Error('CSV file must contain headers and at least one data row');
       }
-      values.push(current.trim());
 
-      const row: any = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index] || '';
-      });
-      
-      data.push(row);
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const data = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        
+        data.push(row);
+      }
+
+      return data;
     }
-
-    return data;
   };
 
   const validateStudentData = (data: any): { isValid: boolean; errors: string[] } => {
@@ -104,45 +227,28 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
 
     requiredFields.forEach(field => {
       if (!data[field] || data[field].toString().trim() === '') {
-        errors.push(`Missing required field: ${field}`);
+        errors.push(`Missing ${field}`);
       }
     });
 
     // Validate gender
-    const validGenders = ['Male', 'Female', 'Other'];
-    if (data.Gender && !validGenders.includes(data.Gender)) {
-      errors.push(`Invalid gender: ${data.Gender}. Must be Male, Female, or Other`);
-    }
-
-    // Validate category
-    const validCategories = ['General', 'OBC', 'SC', 'ST', 'EWS'];
-    if (data.Category && !validCategories.includes(data.Category)) {
-      errors.push(`Invalid category: ${data.Category}. Must be one of: ${validCategories.join(', ')}`);
-    }
-
-    // Validate branch
-    if (data.Branch && !BRANCHES.includes(data.Branch as any)) {
-      errors.push(`Invalid branch: ${data.Branch}`);
+    if (data.Gender && !['Male', 'Female', 'male', 'female'].includes(data.Gender)) {
+      errors.push('Gender must be Male or Female');
     }
 
     // Validate year
-    const validYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-    if (data.Year && !validYears.includes(data.Year)) {
-      errors.push(`Invalid year: ${data.Year}. Must be one of: ${validYears.join(', ')}`);
+    if (data.Year && !['1st Year', '2nd Year', '3rd Year', '4th Year'].includes(data.Year)) {
+      errors.push('Year must be 1st Year, 2nd Year, 3rd Year, or 4th Year');
     }
 
-    // Validate phone number
-    const phoneRegex = /^[0-9]{10}$/;
-    if (data['Phone Number'] && !phoneRegex.test(data['Phone Number'].toString())) {
-      errors.push(`Invalid phone number: ${data['Phone Number']}. Must be 10 digits`);
+    // Validate branch
+    if (data.Branch && !BRANCHES.includes(data.Branch)) {
+      errors.push(`Branch must be one of: ${BRANCHES.join(', ')}`);
     }
 
-    // Validate date of birth
-    if (data['Date of Birth']) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(data['Date of Birth'])) {
-        errors.push(`Invalid date format: ${data['Date of Birth']}. Use YYYY-MM-DD format`);
-      }
+    // Validate phone number format
+    if (data['Phone Number'] && !/^\d{10}$/.test(data['Phone Number'].toString())) {
+      errors.push('Phone Number must be 10 digits');
     }
 
     return {
@@ -152,60 +258,87 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
   };
 
   const processUploadedData = async (data: any[]): Promise<UploadResult> => {
-    const result: UploadResult = {
-      total: data.length,
-      successful: 0,
-      failed: 0,
-      errors: []
-    };
+    const formData = new FormData();
+    
+    if (data.length === 0) {
+      return {
+        total: 0,
+        successful: 0,
+        failed: 0,
+        errors: ['No data to process']
+      };
+    }
 
-    // Convert data to CSV format for backend
-    const csvHeaders = ['Name', 'Address', 'Gender', 'Category', 'Date of Birth', 'Phone Number', 'Branch', 'Year', 'Mother Name'];
-    const csvRows = data.map(row => 
-      csvHeaders.map(header => {
-        const value = row[header] || '';
-        // Escape quotes and wrap in quotes if contains comma
-        return value.includes(',') ? `"${value.replace(/"/g, '""')}"` : value;
-      }).join(',')
+    // Create a temporary file with the data
+    let fileContent: string | Blob;
+    let fileName: string;
+    
+    // Check if original file was Excel by looking at the first few rows
+    // If it has consistent structure, assume it came from Excel
+    const hasConsistentStructure = data.every(row => 
+      typeof row === 'object' && 
+      Object.keys(row).length > 0
     );
     
-    const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
-    
+    if (hasConsistentStructure) {
+      // Create Excel file
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      fileContent = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      fileName = 'upload.xlsx';
+    } else {
+      // Create CSV file (fallback)
+      const headers = Object.keys(data[0]);
+      const csvRows = [headers.join(',')];
+      data.forEach(row => {
+        const values = headers.map(header => {
+          const value = row[header] || '';
+          return `"${value.toString().replace(/"/g, '""')}"`;
+        });
+        csvRows.push(values.join(','));
+      });
+      fileContent = csvRows.join('\n');
+      fileName = 'upload.csv';
+    }
+
+    const file = new File([fileContent], fileName);
+    formData.append('file', file);
+
     try {
-      // Call backend import/save endpoint
-      const formData = new FormData();
-      const csvBlob = new Blob([csvContent], { type: 'text/csv' });
-      formData.append('file', csvBlob, 'students.csv');
-      
       const response = await fetch('http://localhost:8000/api/v1/students/import/save', {
         method: 'POST',
         body: formData,
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const backendResult = await response.json();
-      
-      result.total = backendResult.total || data.length;
-      result.successful = backendResult.successful || 0;
-      result.failed = backendResult.failed || 0;
-      result.errors = backendResult.errors || [];
-      
-    } catch (error) {
-      result.failed = data.length;
-      result.errors.push(`Failed to import students: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
 
-    return result;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to upload students');
+      }
+
+      const result = await response.json();
+      return {
+        total: result.total || data.length,
+        successful: result.successful || 0,
+        failed: result.failed || 0,
+        errors: result.errors || []
+      };
+    } catch (error) {
+      return {
+        total: data.length,
+        successful: 0,
+        failed: data.length,
+        errors: [`Failed to import students: ${error instanceof Error ? error.message : 'Unknown error'}`]
+      };
+    }
   };
 
-  const handleFileUpload = async (file: File) => {
-    if (!file.name.endsWith('.csv')) {
+  const handleFileSelect = async (file: File) => {
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a CSV file",
+        description: "Please select a CSV or Excel (.xlsx) file",
         variant: "destructive",
       });
       return;
@@ -217,27 +350,34 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
     setShowPreview(false);
 
     try {
-      const fileContent = await file.text();
-      const data = parseCSV(fileContent);
+      const data = await parseFile(file);
       
+      // Validate the data structure
+      if (data.length === 0) {
+        throw new Error('No data found in file');
+      }
+
+      // Check if required columns exist
+      const requiredColumns = ['Name', 'Address', 'Gender', 'Category', 'Date of Birth', 'Phone Number', 'Branch', 'Year', 'Mother Name'];
+      const headers = Object.keys(data[0]);
+      const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+      
+      if (missingColumns.length > 0) {
+        throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+      }
+
       setParsedData(data);
-      setShowPreview(true);
       
       toast({
         title: "File parsed successfully",
-        description: `Found ${data.length} records. Click Preview to review data before importing.`,
+        description: `Found ${data.length} student records`,
       });
     } catch (error) {
+      console.error('Error parsing file:', error);
       toast({
-        title: "Parse error",
-        description: "Failed to parse the CSV file. Please check the format.",
+        title: "Error parsing file",
+        description: error instanceof Error ? error.message : "Failed to parse file",
         variant: "destructive",
-      });
-      setUploadResult({
-        total: 0,
-        successful: 0,
-        failed: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error occurred']
       });
     } finally {
       setIsProcessing(false);
@@ -271,8 +411,8 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
       }
     } catch (error) {
       toast({
-        title: "Import error",
-        description: "Failed to import students",
+        title: "Error importing students",
+        description: error instanceof Error ? error.message : "Failed to import students",
         variant: "destructive",
       });
     } finally {
@@ -282,311 +422,241 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileSelect(files[0]);
     }
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileSelect(files[0]);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card className="shadow-card">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Import Students
+            <Upload className="h-5 w-5" />
+            Bulk Student Upload
           </CardTitle>
           <CardDescription>
-            Upload a CSV file to import multiple students at once
+            Upload student data from Excel (.xlsx) or CSV files
           </CardDescription>
         </CardHeader>
+        <CardContent className="space-y-4">
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="space-y-4">
+              <div className="mx-auto w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <FileText className="h-6 w-6 text-gray-600" />
+              </div>
+              <div>
+                <p className="text-lg font-medium">Drop your file here</p>
+                <p className="text-sm text-gray-500">or click to browse</p>
+              </div>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+                variant="outline"
+              >
+                {isProcessing ? "Processing..." : "Choose File"}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Supported formats: Excel (.xlsx), CSV (.csv)
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadSampleExcel}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Template
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upload Section */}
-        <Card className="shadow-card">
+
+      {/* Preview Section */}
+      {showPreview && parsedData && (
+        <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Upload CSV File</CardTitle>
-            <CardDescription>
-              Drag and drop your CSV file or click to browse
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* File Upload Area */}
-            <div 
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                isDragging 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-primary/50'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {isProcessing ? (
-                <div className="space-y-2">
-                  <div className="animate-spin mx-auto w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
-                  <p className="text-sm text-muted-foreground">Processing CSV file...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <div>
-                    <p className="text-lg font-medium">Upload Student Data</p>
-                    <p className="text-sm text-muted-foreground">
-                      Drag and drop your CSV file here, or click to browse
-                    </p>
-                  </div>
-                  <Button variant="outline">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Choose CSV File
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
-
-            <Separator />
-
-            {/* Sample Download */}
-            <div className="text-center">
-              <Button variant="outline" onClick={downloadSampleCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Import Template
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Data Preview ({parsedData.length} records)
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowPreview(false)} variant="outline" size="sm">
+                Hide Preview
+              </Button>
+              <Button onClick={() => setParsedData(null)} variant="outline" size="sm">
+                Clear Data
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Preview Placeholder */}
-        <Card className="shadow-card h-full">
-          <CardHeader>
-            <CardTitle className="text-lg">Preview</CardTitle>
-            <CardDescription>
-              Upload a CSV file to preview the data
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-full flex items-center justify-center min-h-[400px]">
-            <div className="text-center text-muted-foreground">
-              <FileText className="mx-auto h-12 w-12 mb-4 opacity-30" />
-              <p>Upload a CSV file to preview the data</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Preview */}
-      {showPreview && parsedData && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Data Preview ({parsedData.length} records)
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowPreview(false);
-                    setParsedData(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddStudents}
-                  disabled={isAdding}
-                  className="bg-gradient-primary hover:bg-primary-hover"
-                >
-                  {isAdding ? (
-                    <>
-                      <div className="animate-spin mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      Adding Students...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Add Students
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardTitle>
-            <CardDescription>
-              Review the data below before importing. Check for any validation errors.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing first 5 records. Total: {parsedData.length}
+              </div>
+              
               {/* Validation Summary */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <div className="text-lg font-bold text-success">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="text-center p-3 bg-blue-50 rounded">
+                  <div className="font-medium text-blue-700">Total Records</div>
+                  <div className="text-xl font-bold text-blue-900">{parsedData.length}</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded">
+                  <div className="font-medium text-green-700">Valid Records</div>
+                  <div className="text-xl font-bold text-green-900">
                     {parsedData.filter(row => validateStudentData(row).isValid).length}
                   </div>
-                  <div className="text-sm text-muted-foreground">Valid Records</div>
                 </div>
-                <div className="p-3 bg-destructive/10 rounded-lg">
-                  <div className="text-lg font-bold text-destructive">
+                <div className="text-center p-3 bg-red-50 rounded">
+                  <div className="font-medium text-red-700">Invalid Records</div>
+                  <div className="text-xl font-bold text-red-900">
                     {parsedData.filter(row => !validateStudentData(row).isValid).length}
                   </div>
-                  <div className="text-sm text-muted-foreground">Invalid Records</div>
                 </div>
               </div>
 
-              {/* Data Table */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto max-h-96">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 sticky top-0">
-                      <tr>
-                        <th className="text-left p-3 font-medium">Status</th>
-                        <th className="text-left p-3 font-medium">Name</th>
-                        <th className="text-left p-3 font-medium">Phone</th>
-                        <th className="text-left p-3 font-medium">Branch</th>
-                        <th className="text-left p-3 font-medium">Year</th>
-                        <th className="text-left p-3 font-medium">Gender</th>
-                        <th className="text-left p-3 font-medium">Category</th>
-                        <th className="text-left p-3 font-medium">Errors</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parsedData.map((row, index) => {
-                        const validation = validateStudentData(row);
-                        return (
-                          <tr key={index} className="border-t hover:bg-muted/20">
-                            <td className="p-3">
-                              {validation.isValid ? (
-                                <Badge variant="secondary" className="bg-success/20 text-success">
-                                  Valid
-                                </Badge>
-                              ) : (
-                                <Badge variant="destructive">
-                                  Invalid
-                                </Badge>
-                              )}
+              {/* Sample Data Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {Object.keys(parsedData[0]).map(header => (
+                        <th key={header} className="border border-gray-300 px-2 py-1 text-left font-medium">
+                          {header}
+                        </th>
+                      ))}
+                      <th className="border border-gray-300 px-2 py-1 text-left font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedData.slice(0, 5).map((row, index) => {
+                      const validation = validateStudentData(row);
+                      return (
+                        <tr key={index} className={validation.isValid ? '' : 'bg-red-50'}>
+                          {Object.values(row).map((value, cellIndex) => (
+                            <td key={cellIndex} className="border border-gray-300 px-2 py-1">
+                              {String(value)}
                             </td>
-                            <td className="p-3 font-medium">{row.Name || 'N/A'}</td>
-                            <td className="p-3">{row['Phone Number'] || 'N/A'}</td>
-                            <td className="p-3">{row.Branch || 'N/A'}</td>
-                            <td className="p-3">{row.Year || 'N/A'}</td>
-                            <td className="p-3">{row.Gender || 'N/A'}</td>
-                            <td className="p-3">{row.Category || 'N/A'}</td>
-                            <td className="p-3">
-                              {validation.errors.length > 0 && (
-                                <div className="text-xs text-destructive max-w-48">
-                                  {validation.errors.slice(0, 2).join(', ')}
-                                  {validation.errors.length > 2 && '...'}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          ))}
+                          <td className="border border-gray-300 px-2 py-1">
+                            {validation.isValid ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800">Valid</Badge>
+                            ) : (
+                              <Badge variant="destructive">Invalid</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
-              {/* Warning for invalid records */}
-              {parsedData.some(row => !validateStudentData(row).isValid) && (
-                <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
-                    <div>
-                      <p className="font-medium text-warning">Invalid Records Found</p>
-                      <p className="text-sm text-muted-foreground">
-                        Only valid records will be imported. Please fix the errors in your CSV file and re-upload to import all students.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <Button 
+                onClick={handleAddStudents} 
+                className="w-full" 
+                disabled={isAdding || parsedData.filter(row => validateStudentData(row).isValid).length === 0}
+              >
+                {isAdding ? "Adding Students..." : `Add ${parsedData.filter(row => validateStudentData(row).isValid).length} Valid Students`}
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Upload Results */}
+      {/* Results Section */}
       {uploadResult && (
-        <Card className="shadow-card">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {uploadResult.successful > 0 ? (
-                <CheckCircle className="h-5 w-5 text-success" />
+                <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
+                <XCircle className="h-5 w-5 text-red-600" />
               )}
               Upload Results
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Summary */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold">{uploadResult.total}</div>
-                <div className="text-sm text-muted-foreground">Total Records</div>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-blue-50 rounded">
+                <div className="font-medium text-blue-700">Total</div>
+                <div className="text-xl font-bold text-blue-900">{uploadResult.total}</div>
               </div>
-              <div className="p-4 bg-success/10 rounded-lg">
-                <div className="text-2xl font-bold text-success">{uploadResult.successful}</div>
-                <div className="text-sm text-muted-foreground">Successful</div>
+              <div className="text-center p-3 bg-green-50 rounded">
+                <div className="font-medium text-green-700">Successful</div>
+                <div className="text-xl font-bold text-green-900">{uploadResult.successful}</div>
               </div>
-              <div className="p-4 bg-destructive/10 rounded-lg">
-                <div className="text-2xl font-bold text-destructive">{uploadResult.failed}</div>
-                <div className="text-sm text-muted-foreground">Failed</div>
+              <div className="text-center p-3 bg-red-50 rounded">
+                <div className="font-medium text-red-700">Failed</div>
+                <div className="text-xl font-bold text-red-900">{uploadResult.failed}</div>
               </div>
             </div>
-
-            {/* Errors */}
-            {uploadResult.errors.length > 0 && (
+            
+            {uploadResult.errors && uploadResult.errors.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-destructive" />
-                  Errors ({uploadResult.errors.length})
+                <h4 className="font-medium text-red-700 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Errors:
                 </h4>
-                <div className="max-h-48 overflow-y-auto space-y-1">
+                <ul className="text-sm text-red-600 space-y-1">
                   {uploadResult.errors.map((error, index) => (
-                    <div key={index} className="text-sm bg-destructive/10 text-destructive p-2 rounded">
-                      {error}
-                    </div>
+                    <li key={index}>• {error}</li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Show preview button when data is parsed */}
+      {parsedData && !showPreview && (
+        <div className="text-center">
+          <Button onClick={() => setShowPreview(true)} variant="outline">
+            <Eye className="h-4 w-4 mr-2" />
+            Preview Data ({parsedData.length} records)
+          </Button>
+        </div>
       )}
     </div>
   );

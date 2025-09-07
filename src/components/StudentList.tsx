@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Student } from '@/types/student';
 import { downloadCSV } from '@/utils/studentUtils';
-import { Search, Download, Users, Trash2, Eye, Filter } from "lucide-react";
+import { Search, Download, Users, Trash2, Eye, Filter, Edit } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ const StudentList = () => {
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     loadStudents();
@@ -35,7 +36,7 @@ const StudentList = () => {
 
   const loadStudents = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/students');
+      const response = await fetch('http://localhost:8000/api/v1/students/');
       if (response.ok) {
         const studentData = await response.json();
         setStudents(studentData);
@@ -65,6 +66,52 @@ const StudentList = () => {
     });
   }, [students, searchTerm, filterBranch, filterYear]);
 
+  const handleUpdateStudent = async (updatedStudent: Student) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/students/${updatedStudent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: updatedStudent.first_name,
+          last_name: updatedStudent.last_name,
+          email: updatedStudent.email,
+          phone: updatedStudent.phone,
+          date_of_birth: updatedStudent.date_of_birth,
+          gender: updatedStudent.gender,
+          address: updatedStudent.address,
+          state: updatedStudent.state,
+          department: updatedStudent.department,
+          admission_number: updatedStudent.admission_number,
+          roll_number: updatedStudent.roll_number,
+          institutional_email: updatedStudent.institutional_email,
+        }),
+      });
+      
+      if (response.ok) {
+        await loadStudents();
+        setEditingStudent(null);
+        toast({
+          title: "Student updated",
+          description: "Student record has been updated successfully",
+        });
+      } else {
+        toast({
+          title: "Update failed",
+          description: "Failed to update student record",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Failed to update student record",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteStudent = async (studentId: string) => {
     try {
       const response = await fetch(`http://localhost:8000/api/v1/students/${studentId}`, {
@@ -93,7 +140,7 @@ const StudentList = () => {
     }
   };
 
-  const handleExportCSV = async () => {
+  const handleExport = async () => {
     if (filteredStudents.length === 0) {
       toast({
         title: "No data to export",
@@ -105,32 +152,37 @@ const StudentList = () => {
 
     try {
       const response = await fetch('http://localhost:8000/api/v1/students/export/csv');
-      if (response.ok) {
-        const csvContent = await response.text();
-        downloadCSV(csvContent, 'student-list.csv');
-        
-        toast({
-          title: "Export successful",
-          description: `Exported ${filteredStudents.length} student records`,
-        });
-      } else {
-        toast({
-          title: "Export failed",
-          description: "Failed to export student data",
-          variant: "destructive",
-        });
+      if (!response.ok) {
+        throw new Error('Failed to export students');
       }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'students.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export successful",
+        description: "Students data has been exported to CSV",
+      });
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: "Export failed",
-        description: "Failed to export student data",
+        description: "Failed to export students data",
         variant: "destructive",
       });
     }
   };
 
-  const uniqueBranches = [...new Set(students.map(s => s.department))];
-  const uniqueYears = [...new Set(students.map(s => s.state))];
+  const uniqueBranches = [...new Set(students.map(s => s.department))].filter(branch => branch && branch.trim() !== '');
+  const uniqueYears = [...new Set(students.map(s => s.state))].filter(year => year && year.trim() !== '');
 
   return (
     <div className="space-y-6">
@@ -198,7 +250,7 @@ const StudentList = () => {
             {/* Export Button */}
             <div className="self-end">
               <Button 
-                onClick={handleExportCSV}
+                onClick={handleExport}
                 variant="outline"
                 className="hover:bg-success/10 hover:text-success hover:border-success"
               >
@@ -281,7 +333,7 @@ const StudentList = () => {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Branch:</span>
+                    <span className="text-muted-foreground">Department:</span>
                     <p className="font-medium truncate" title={student.department}>
                       {student.department}
                     </p>
@@ -316,6 +368,15 @@ const StudentList = () => {
                   >
                     <Eye className="mr-2 h-3 w-3" />
                     View
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-primary hover:bg-primary/10"
+                    onClick={() => setEditingStudent(student)}
+                  >
+                    <Edit className="h-3 w-3" />
                   </Button>
                   
                   <AlertDialog>
@@ -407,10 +468,6 @@ const StudentList = () => {
                   <Label>Department</Label>
                   <p className="font-medium">{selectedStudent.department}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>City</Label>
-                  <p className="font-medium">{selectedStudent.city}</p>
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -426,14 +483,210 @@ const StudentList = () => {
               <div className="space-y-2">
                 <Label>Created</Label>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(selectedStudent.created_at).toLocaleString()}
+                  {selectedStudent.created_at && !isNaN(new Date(selectedStudent.created_at).getTime()) 
+                    ? new Date(selectedStudent.created_at).toLocaleString()
+                    : 'Date not available'
+                  }
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
+
+      {/* Student Edit Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-primary" />
+                  Edit Student Details
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setEditingStudent(null)}>
+                  ×
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <EditStudentForm 
+                student={editingStudent} 
+                onSave={handleUpdateStudent}
+                onCancel={() => setEditingStudent(null)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
+  );
+};
+
+// Edit Student Form Component
+const EditStudentForm = ({ student, onSave, onCancel }: {
+  student: Student;
+  onSave: (student: Student) => void;
+  onCancel: () => void;
+}) => {
+  const [formData, setFormData] = useState({
+    first_name: student.first_name || '',
+    last_name: student.last_name || '',
+    email: student.email || '',
+    phone: student.phone || '',
+    date_of_birth: student.date_of_birth || '',
+    gender: student.gender || 'male',
+    address: student.address || '',
+    state: student.state || '',
+    department: student.department || '',
+    admission_number: student.admission_number || '',
+    roll_number: student.roll_number || '',
+    institutional_email: student.institutional_email || '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      ...student,
+      ...formData,
+    });
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="first_name">First Name</Label>
+          <Input
+            id="first_name"
+            value={formData.first_name}
+            onChange={(e) => handleChange('first_name', e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="last_name">Last Name</Label>
+          <Input
+            id="last_name"
+            value={formData.last_name}
+            onChange={(e) => handleChange('last_name', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => handleChange('phone', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="date_of_birth">Date of Birth</Label>
+          <Input
+            id="date_of_birth"
+            type="date"
+            value={formData.date_of_birth}
+            onChange={(e) => handleChange('date_of_birth', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="gender">Gender</Label>
+          <Select value={formData.gender} onValueChange={(value) => handleChange('gender', value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="department">Department</Label>
+          <Input
+            id="department"
+            value={formData.department}
+            onChange={(e) => handleChange('department', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="state">Year</Label>
+          <Select value={formData.state} onValueChange={(value) => handleChange('state', value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1st Year">1st Year</SelectItem>
+              <SelectItem value="2nd Year">2nd Year</SelectItem>
+              <SelectItem value="3rd Year">3rd Year</SelectItem>
+              <SelectItem value="4th Year">4th Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="admission_number">Admission Number</Label>
+          <Input
+            id="admission_number"
+            value={formData.admission_number}
+            onChange={(e) => handleChange('admission_number', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="roll_number">Roll Number</Label>
+          <Input
+            id="roll_number"
+            value={formData.roll_number}
+            onChange={(e) => handleChange('roll_number', e.target.value)}
+          />
+        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="address">Address</Label>
+        <Input
+          id="address"
+          value={formData.address}
+          onChange={(e) => handleChange('address', e.target.value)}
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="institutional_email">Institutional Email</Label>
+        <Input
+          id="institutional_email"
+          type="email"
+          value={formData.institutional_email}
+          onChange={(e) => handleChange('institutional_email', e.target.value)}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button type="submit" className="flex-1">
+          Save Changes
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 };
 
